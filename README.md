@@ -9,6 +9,7 @@ Features
 - parses Apache access.log using regexp
 - saves it to WebSQL database
 - provides an input for SQL query
+- provides bookmarks for some interesting queries
 
 Requirements
 ------------
@@ -28,15 +29,6 @@ Usage
 * open the page with your web browser
 * it will load the file into `log` table
 * to reload data, execute `DROP TABLE log` query and reload the page
-
-Useful queries
---------------
-
-* `SELECT * FROM log LIMIT 10` to see first 10 requests
-* `SELECT *, count(1) FROM log WHERE response="404" GROUP BY url ORDER BY count(1) DESC`
-to see URLs which returned "404 Not Found" error
-* `SELECT *, count(1) FROM log WHERE response="301" GROUP BY url ORDER BY count(1) DESC`
-to get similar statistics about redirects
 
 Plans
 -----
