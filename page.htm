@@ -1,0 +1,17 @@
+<!doctype html>
+<style>
+#query {width: 90% }
+#submit {width: 9% }
+#result table { border-collapse:collapse; table-layout: fixed; word-wrap: break-word; width: 100%}
+#result table, #result td, #result th { border:1px solid black; }
+#result pre {white-space: pre-wrap}
+</style>
+<input id="query"/><input type="submit" id="submit"/>
+<div id="result"/>
+
+<script src="html5sql.js"></script>
+<script src="logviewer.js"></script>
+<script>
+init(function(){log('ready!')});
+gebi('submit').onclick=function(){process_SQL(gebi('query').value)}
+</script>
