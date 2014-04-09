@@ -8,6 +8,8 @@ filename='access.log';
 var re=/^([^ ]*) ([^ ]*) ([^ ]*) \[([^\]]*)\] "(GET|POST|HEAD|CONNECT) (.*) (HTTP\/1\..)" ([0-9]*) ([0-9]*) "([^ ]*)" "(.*)"$/;
 var fields='ip, hostname, user, datetime, method, url, protocol, response, size, referrer, ua';
 
+afields=fields.split(/[, ]+/);
+
 function gebi(id){return document.getElementById(id)};
 function escapeHTML(text){return (''+text).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#039;').replace(/</g,'&lt;').replace(/>/g,'&gt;')};
 function log(text){gebi('result').innerHTML='<pre>'+escapeHTML(text)+'</pre>'}
@@ -15,19 +17,35 @@ function error_handler(error, statement){log("Error [" + error.message + "] when
 
 function init(cb){
 	html5sql.openDatabase(databaseName, displayName, estimatedSize);
-	// var create_table_sql = 'CREATE TABLE log '+'('+fields+')';
-	// TODO: check if tables sql match given, if not -- drop
-	// use 'select * from sqlite_master'
-	requests=['CREATE TABLE IF NOT EXISTS log '+'('+fields+')'];
-	var afields=fields.split(/[, ]+/);
+	var create_table_sql = 'CREATE TABLE log '+'('+fields+')';
+	html5sql.process('SELECT sql FROM sqlite_master WHERE type="table" AND name="log"',
+			function(tx, result) {
+				if(result.rows.length==0) {
+					init_table(cb,[create_table_sql]);
+				} else if(result.rows.item(0).sql!=create_table_sql) {
+					init_table(cb,['DROP TABLE log', create_table_sql]);
+				} else {
+					read_file_into_table_if_needed(cb);
+				}
+			},
+			error_handler);
+};
+
+function init_table(cb,requests){
 	// TODO: add user-defined indexes
 	for(var i in afields) {
 		requests.push('CREATE INDEX IF NOT EXISTS '+afields[i]+
-				' ON log'+'('+afields[i]+')')
+				' ON log'+'('+afields[i]+')');
+		html5sql.process(requests,
+				function(tx, result) {
+					read_file_into_table(cb);
+				},
+				error_handler);
 	}
-	requests.push('ANALYZE log');
-	requests.push('SELECT stat FROM sqlite_stat1 WHERE tbl="log" LIMIT 1');
-	html5sql.process(requests,
+};
+
+function read_file_into_table_if_needed(cb){
+	html5sql.process(['ANALYZE log', 'SELECT stat FROM sqlite_stat1 WHERE tbl="log" LIMIT 1'],
 			function(tx, result) {
 				if(result.rows.length==0 || result.rows.item(0).stat.charAt(0)=='0') {
 					read_file_into_table(cb);
