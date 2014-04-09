@@ -5,8 +5,10 @@ estimatedSize=1*1000*1000;
 filename='access.log';
 
 // 127.0.0.1 localhost - [06/Apr/2014:13:53:23 +0200] "GET /index.html HTTP/1.1" 200 2780 "http://localhost/" "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:28.0) Gecko/20100101 Firefox/28.0"
-var re=/^([^ ]*) ([^ ]*) ([^ ]*) \[([^\]]*)\] "(GET|POST|HEAD|CONNECT) (.*) (HTTP\/1\..)" ([0-9]*) ([0-9]*) "([^ ]*)" "(.*)"$/;
-var fields='ip, hostname, user, datetime, method, url, protocol, response, size, referrer, ua';
+re=/^([^ ]*) ([^ ]*) ([^ ]*) \[([^\]]*)\] "(GET|POST|HEAD|CONNECT) (.*) (HTTP\/1\..)" ([0-9]*) ([0-9]*) "([^ ]*)" "(.*)"$/;
+fields='ip, hostname, user, datetime, method, url, protocol, response, size, referrer, ua';
+// above fields are matched from regexp; below fields are added by script
+fields+=', date, time';
 
 afields=fields.split(/[, ]+/);
 
@@ -75,8 +77,13 @@ function read_text_into_table(text,cb){
 	var trim = function (string) {
 		return string.replace(/^\s+/, "").replace(/\s+$/, "");
 	};
-	lines=text.split('\n').map(trim);
-	requests=[];
+	var field_pos={};//{ip:0, hostname: 1,...}
+	for(var i in afields) {
+		field_pos[afields[i]]=i;
+	}
+	var months={'Jan':'01', 'Feb':'02', 'Mar':'03', 'Apr':'04', 'May':'05', 'Jun':'06', 'Jul':'07', 'Aug':'08', 'Sep':'09', 'Oct':'10', 'Nov':'11', 'Dec':'12'};
+	var lines=text.split('\n').map(trim);
+	var requests=[];
 	log('Parsing '+lines.length+' entries...');
 	for(var line in lines){
 		if(lines[line]=='') {
@@ -88,7 +95,10 @@ function read_text_into_table(text,cb){
 			continue;
 		};
 		match.shift();
-		// TODO: add user-defined processing
+		// parse Apache date to SQLite date
+		var datetime=match[field_pos['datetime']].match(/^(\d*)\/(\w*)\/(\d*):([\d:]*)/);
+		match.push(datetime[3]+'-'+months[datetime[2]]+'-'+datetime[1]);//date
+		match.push(datetime[4]);//time
 		requests.push({
 			sql:'INSERT INTO log '+'('+fields+')'+
 			'VALUES'+'('+fields.replace(/[^ ,]+/g, '?')+ ')',
