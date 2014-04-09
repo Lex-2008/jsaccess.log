@@ -41,9 +41,7 @@ to get similar statistics about redirects
 Plans
 -----
 
-* parse Apache date into SQL
 * parse ua into browser, os, etc
 * parse referrer to search string for some search engines
 * bookmark useful queries
 
-Метки: keep-this-tag-format, tags-are-optional, beware-with-underscores-in-markdown, example
