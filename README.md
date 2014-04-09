@@ -36,4 +36,9 @@ Plans
 * parse ua into browser, os, etc
 * parse referrer to search string for some search engines
 * bookmark useful queries
+* hide and add back columns
+* hide too long strings (imagine ua) behind overflow:hidden and show them on click
+* make configuration easier (call one function with parameters and generate HTML on the fly)
+* tell SQLite which columns are numeric ones
+* draw histograms on numeric columns
 
