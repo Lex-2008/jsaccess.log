@@ -113,7 +113,7 @@ function read_text_into_table(text,cb){
 
 
 function process_SQL(sql){
-	html5sql.process(sql,show_SQL_results,error_handler);
+	html5sql.process([sql],show_SQL_results,error_handler);
 }
 
 function show_SQL_results(tx, response){
