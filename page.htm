@@ -17,10 +17,10 @@
 	<option value="SELECT url, count(*) FROM log WHERE response=&quot;404&quot; GROUP BY url ORDER BY count(*) DESC LIMIT 20">Top 20 "404 Not Found" responses</option>
 	<option value="SELECT url, size/1000/1000. AS &quot;size(MB)&quot;, count(*) FROM log GROUP BY url ORDER BY CAST(size AS NUMERIC) DESC LIMIT 50">Top 50 heaviest resources</option>
 </select>
-<input id="query"/><input type="submit" id="submit"/>
+<input id="query"><input type="submit" id="submit">
 <ul id="hidden_list"></ul>
 <style id="hidden_style"></style>
-<div id="result"/>
+<div id="result"></div>
 
 <script src="html5sql.js"></script>
 <script src="logviewer.js"></script>
