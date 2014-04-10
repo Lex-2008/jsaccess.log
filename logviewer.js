@@ -11,6 +11,7 @@ fields='ip, hostname, user, datetime, method, url, protocol, response, size, ref
 fields+=', date, time';
 
 afields=fields.split(/[, ]+/);
+hidden={'user':1, 'datetime':1, 'method':1, 'protocol':1};
 
 function gebi(id){return document.getElementById(id)};
 function escapeHTML(text){return (''+text).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#039;').replace(/</g,'&lt;').replace(/>/g,'&gt;')};
@@ -126,7 +127,7 @@ function show_SQL_results(tx, response){
 	var columns=[];
 	for(var name in response.rows.item(0)) {
 		columns.push(name);
-		result+='<th>'+escapeHTML(name)+'</th>';
+		result+='<th class="'+escapeHTML(name)+'">'+escapeHTML(name)+'</th>';
 	}
 	result+='</tr></thead><tbody>';
 	// all rows
@@ -135,7 +136,7 @@ function show_SQL_results(tx, response){
 		result+='<tr>';
 		for(var j=0; j<columns.length; j++){
 			if(columns[j] in row){
-				result+='<td>'+escapeHTML(row[columns[j]])+'</td>';
+				result+='<td class="'+escapeHTML(columns[j])+'">'+escapeHTML(row[columns[j]])+'</td>';
 			} else {
 				result+='<td> </td>';
 			}
@@ -144,4 +145,32 @@ function show_SQL_results(tx, response){
 	}
 	result+='</tbody></table>';
 	gebi('result').innerHTML=result;
+	// refresh list of hidden columns
+	cv_me();
+}
+
+function cv_me(){
+	if(this.className) {
+		hidden[this.className]=!hidden[this.className];
+	}
+	var hidden_list='';
+	var headers=document.querySelectorAll('#result table th');
+	for(var i=0; i<headers.length; i++) {
+		headers[i].onclick=cv_me;
+		if(hidden[headers[i].className]) {
+			hidden_list+='<li class="'+headers[i].className+'">'+headers[i].className+'</li>';
+		}
+	}
+	gebi('hidden_list').innerHTML=hidden_list;
+	var items=document.querySelectorAll('#hidden_list li');
+	for(var i=0; i<items.length; i++) {
+		items[i].onclick=cv_me;
+	}
+	var hidden_style=[];
+	for(var className in hidden) {
+		if(hidden[className]) {
+			hidden_style.push('#result table .'+className);
+		}
+	}
+	gebi('hidden_style').innerHTML=hidden_style.join(',')+'{display:none}';
 }

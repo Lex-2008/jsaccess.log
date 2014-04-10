@@ -2,7 +2,9 @@
 <style>
 #query, #bookmarks {width: 90% }
 #submit {width: 9% }
+#hidden_list li {display: inline; border: 1px solid black; padding: 1px 1em; margin: 1px 1em; cursor: pointer; font-weight: bold}
 #result table { border-collapse:collapse; table-layout: fixed; word-wrap: break-word; width: 100%}
+#result table th {cursor: pointer; }
 #result table, #result td, #result th { border:1px solid black; }
 #result pre {white-space: pre-wrap}
 </style>
@@ -16,6 +18,8 @@
 	<option value="SELECT url, size/1000/1000. AS &quot;size(MB)&quot;, count(*) FROM log GROUP BY url ORDER BY CAST(size AS NUMERIC) DESC LIMIT 50">Top 50 heaviest resources</option>
 </select>
 <input id="query"/><input type="submit" id="submit"/>
+<ul id="hidden_list"></ul>
+<style id="hidden_style"></style>
 <div id="result"/>
 
 <script src="html5sql.js"></script>
