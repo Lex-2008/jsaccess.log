@@ -26,7 +26,34 @@ function escapeHTML(text){return (''+text).replace(/&/g,'&amp;').replace(/"/g,'&
 function log(text){gebi('result').innerHTML='<pre>'+escapeHTML(text)+'</pre>'}
 function error_handler(error, statement){log("Error [" + error.message + "] when processing [" + statement+']');}
 
-function init(cb){
+
+function init(elem){
+	var str='';
+	str+='<style>';
+	str+='#query, #bookmarks {width: 90% }';
+	str+='#submit, #bookmark {width: 9% }';
+	str+='#hidden_list li {display: inline; border: 1px solid black; padding: 1px 1em; margin: 1px 1em; cursor: pointer; font-weight: bold}';
+	str+='#result table { border-collapse:collapse; table-layout: fixed; word-wrap: break-word; width: 100%}';
+	str+='#result table th {cursor: pointer; }';
+	str+='#result table, #result td, #result th { border:1px solid black; }';
+	str+='#result pre {white-space: pre-wrap}';
+	str+='</style>';
+	str+='<select id="bookmarks"></select><input type="button" id="bookmark" value="<<<">';
+	str+='<input id="query"><input type="submit" id="submit">';
+	str+='<ul id="hidden_list"></ul>';
+	str+='<style id="hidden_style"></style>';
+	str+='<div id="result"></div>';
+	elem.innerHTML=str;
+	init_db(function(){log('ready!')});
+	init_bookmarks();
+	init_hidden();
+	gebi('submit').onclick=function(){process_SQL(gebi('query').value)};
+	gebi('bookmark').onclick=function(){bookmark(gebi('query').value)};
+	gebi('bookmarks').onchange=function(){if(this.value){gebi('query').value=this.value;this.value=''}};
+}
+
+
+function init_db(cb){
 	html5sql.openDatabase(databaseName, displayName, estimatedSize);
 	html5sql.defaultFailureCallback=error_handler;
 	var create_table_sql = 'CREATE TABLE log '+'('+fields+')';

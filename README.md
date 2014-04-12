@@ -37,7 +37,6 @@ Plans
 * parse ua into browser, os, etc
 * parse referrer to search string for some search engines
 * hide too long strings (imagine ua) behind overflow:hidden and show them on click
-* make configuration easier (call one function with parameters and generate HTML on the fly)
 * use Range requests to check for updates in files
 * tell SQLite which columns are numeric ones
 * draw histograms on numeric columns
