@@ -1,22 +1,14 @@
 <!doctype html>
 <style>
 #query, #bookmarks {width: 90% }
-#submit {width: 9% }
+#submit, #bookmark {width: 9% }
 #hidden_list li {display: inline; border: 1px solid black; padding: 1px 1em; margin: 1px 1em; cursor: pointer; font-weight: bold}
 #result table { border-collapse:collapse; table-layout: fixed; word-wrap: break-word; width: 100%}
 #result table th {cursor: pointer; }
 #result table, #result td, #result th { border:1px solid black; }
 #result pre {white-space: pre-wrap}
 </style>
-<select id="bookmarks">
-	<option value="">Select a bookmarked query to paste or type your own</option>
-	<option value="SELECT * FROM log ORDER BY date DESC, time DESC LIMIT 10">Last 10 visits</option>
-	<option value="SELECT * FROM log WHERE url=&quot;/&quot; ORDER BY date DESC, time DESC LIMIT 10">Last 10 visits for a specific URL</option>
-	<option value="SELECT url, count(*) FROM log GROUP BY url ORDER BY count(*) DESC LIMIT 50">Top 50 pages</option>
-	<option value="SELECT response, count(*) FROM log GROUP BY response ORDER BY count(*) DESC">Response codes</option>
-	<option value="SELECT url, count(*) FROM log WHERE response=&quot;404&quot; GROUP BY url ORDER BY count(*) DESC LIMIT 20">Top 20 "404 Not Found" responses</option>
-	<option value="SELECT url, size/1000/1000. AS &quot;size(MB)&quot;, count(*) FROM log GROUP BY url ORDER BY CAST(size AS NUMERIC) DESC LIMIT 50">Top 50 heaviest resources</option>
-</select>
+<select id="bookmarks"></select><input type="button" id="bookmark" value="<<<">
 <input id="query"><input type="submit" id="submit">
 <ul id="hidden_list"></ul>
 <style id="hidden_style"></style>
@@ -26,6 +18,9 @@
 <script src="logviewer.js"></script>
 <script>
 init(function(){log('ready!')});
+init_bookmarks();
+init_hidden();
 gebi('submit').onclick=function(){process_SQL(gebi('query').value)};
+gebi('bookmark').onclick=function(){bookmark(gebi('query').value)};
 gebi('bookmarks').onchange=function(){if(this.value){gebi('query').value=this.value;this.value=''}};
 </script>

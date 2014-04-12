@@ -12,6 +12,14 @@ fields+=', date, time';
 
 afields=fields.split(/[, ]+/);
 hidden={'user':1, 'datetime':1, 'method':1, 'protocol':1};
+bookmarks={
+	"SELECT * FROM log ORDER BY date DESC, time DESC LIMIT 10":"Last 10 visits",
+	"SELECT * FROM log WHERE url=\"/\" ORDER BY date DESC, time DESC LIMIT 10":"Last 10 visits for a specific URL",
+	"SELECT url, count(*) FROM log GROUP BY url ORDER BY count(*) DESC LIMIT 50":"Top 50 pages",
+	"SELECT response, count(*) FROM log GROUP BY response ORDER BY count(*) DESC":"Response codes",
+	"SELECT url, count(*) FROM log WHERE response=\"404\" GROUP BY url ORDER BY count(*) DESC LIMIT 20":"Top 20 \"404 Not Found\" responses",
+	"SELECT url, size/1000/1000. AS \"size(MB)\", count(*) FROM log GROUP BY url ORDER BY CAST(size AS NUMERIC) DESC LIMIT 50":"Top 50 heaviest resources",
+};
 
 function gebi(id){return document.getElementById(id)};
 function escapeHTML(text){return (''+text).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#039;').replace(/</g,'&lt;').replace(/>/g,'&gt;')};
@@ -173,4 +181,49 @@ function cv_me(){
 		}
 	}
 	gebi('hidden_style').innerHTML=hidden_style.join(',')+'{display:none}';
+}
+
+function init_hidden(){
+	if(localStorage.hidden) {
+		try{
+			hidden=JSON.parse(localStorage.hidden);
+		} catch (e) {
+			delete localStorage.hidden;
+		}
+	}
+}
+
+function bookmark(text){
+	var title=prompt(
+			bookmarks[text]?'Edit title (make empty to delete):':'Add bookmark (enter title):',
+			bookmarks[text]?bookmarks[text]:'');
+	if(title=='') {
+		delete bookmarks[text];
+	} else if(bookmarks[text]==title) {
+		// nothing changed, nothing to do
+		return;
+	} else {
+		bookmarks[text]=title;
+	}
+	localStorage.bookmarks=JSON.stringify(bookmarks);
+	rebuild_bookmarks();
+};
+
+function rebuild_bookmarks(){
+	var bookmarks_text='<option value="">Select a bookmarked query to paste or type your own</option>';
+	for(var sql in bookmarks) {
+		bookmarks_text+='<option value="'+escapeHTML(sql)+'">'+escapeHTML(bookmarks[sql])+'</option>';
+	}
+	gebi('bookmarks').innerHTML=bookmarks_text;
+}
+
+function init_bookmarks(){
+	if(localStorage.bookmarks) {
+		try{
+			bookmarks=JSON.parse(localStorage.bookmarks);
+		} catch (e) {
+			delete localStorage.bookmarks;
+		}
+	}
+	rebuild_bookmarks();
 }
