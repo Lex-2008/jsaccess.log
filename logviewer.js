@@ -28,6 +28,7 @@ function error_handler(error, statement){log("Error [" + error.message + "] when
 
 function init(cb){
 	html5sql.openDatabase(databaseName, displayName, estimatedSize);
+	html5sql.defaultFailureCallback=error_handler;
 	var create_table_sql = 'CREATE TABLE log '+'('+fields+')';
 	html5sql.process('SELECT sql FROM sqlite_master WHERE type="table" AND name="log"',
 			function(tx, result) {
@@ -38,8 +39,7 @@ function init(cb){
 				} else {
 					read_file_into_table_if_needed(cb);
 				}
-			},
-			error_handler);
+			});
 };
 
 function init_table(cb,requests){
@@ -49,10 +49,7 @@ function init_table(cb,requests){
 				' ON log'+'('+afields[i]+')');
 	}
 	html5sql.process(requests,
-			function(tx, result) {
-				read_file_into_table(cb);
-			},
-			error_handler);
+			function(){read_file_into_table(cb)});
 };
 
 function read_file_into_table_if_needed(cb){
@@ -64,8 +61,7 @@ function read_file_into_table_if_needed(cb){
 				else {
 					cb();
 				}
-			},
-			error_handler);
+			});
 };
 
 function read_file_into_table(cb){
@@ -115,14 +111,13 @@ function read_text_into_table(text,cb){
 	};
 	log('Sending to database...');
 	html5sql.process(requests,
-			function(){ cb() },
-			error_handler);
+			function(){cb()});
 }
 
 
 
 function process_SQL(sql){
-	html5sql.process([sql],show_SQL_results,error_handler);
+	html5sql.process([sql],show_SQL_results);
 }
 
 function show_SQL_results(tx, response){
