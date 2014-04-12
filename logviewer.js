@@ -39,12 +39,12 @@ function init_table(cb,requests){
 	for(var i in afields) {
 		requests.push('CREATE INDEX IF NOT EXISTS '+afields[i]+
 				' ON log'+'('+afields[i]+')');
-		html5sql.process(requests,
-				function(tx, result) {
-					read_file_into_table(cb);
-				},
-				error_handler);
 	}
+	html5sql.process(requests,
+			function(tx, result) {
+				read_file_into_table(cb);
+			},
+			error_handler);
 };
 
 function read_file_into_table_if_needed(cb){
