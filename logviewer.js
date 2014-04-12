@@ -8,10 +8,10 @@ filename='access.log';
 re=/^([^ ]*) ([^ ]*) ([^ ]*) \[([^\]]*)\] "(GET|POST|HEAD|CONNECT) (.*) (HTTP\/1\..)" ([0-9]*) ([0-9]*) "([^ ]*)" "(.*)"$/;
 fields='ip, hostname, user, datetime, method, url, protocol, response, size, referrer, ua';
 // above fields are matched from regexp; below fields are added by script
-fields+=', date, time';
+fields+=', date, time, bot, browser, browser_ver, os, os_ver';
 
 afields=fields.split(/[, ]+/);
-hidden={'user':1, 'datetime':1, 'method':1, 'protocol':1};
+hidden={'user':1, 'datetime':1, 'method':1, 'protocol':1, 'ua':1};
 bookmarks={
 	"SELECT * FROM log ORDER BY date DESC, time DESC LIMIT 10":"Last 10 visits",
 	"SELECT * FROM log WHERE url=\"/\" ORDER BY date DESC, time DESC LIMIT 10":"Last 10 visits for a specific URL",
@@ -19,6 +19,9 @@ bookmarks={
 	"SELECT response, count(*) FROM log GROUP BY response ORDER BY count(*) DESC":"Response codes",
 	"SELECT url, count(*) FROM log WHERE response=\"404\" GROUP BY url ORDER BY count(*) DESC LIMIT 20":"Top 20 \"404 Not Found\" responses",
 	"SELECT url, size/1000/1000. AS \"size(MB)\", count(*) FROM log GROUP BY url ORDER BY CAST(size AS NUMERIC) DESC LIMIT 50":"Top 50 heaviest resources",
+	"SELECT browser, bot, count(*) FROM log GROUP BY browser ORDER BY count(*) DESC LIMIT 20":"Top 20 browsers (incl bots)",
+	"SELECT os, os_ver, count(*) FROM log WHERE bot=\"no\" GROUP BY os, os_ver ORDER BY count(*) DESC":"Popular OSes",
+	"SELECT ua, count(*) FROM log WHERE browser=\"unknown\" GROUP BY ua ORDER BY count(*) DESC LIMIT 50":"Top unknown browsers",
 };
 
 function gebi(id){return document.getElementById(id)};
@@ -131,6 +134,9 @@ function read_text_into_table(text,cb){
 		var datetime=match[field_pos['datetime']].match(/^(\d*)\/(\w*)\/(\d*):([\d:]*)/);
 		match.push(datetime[3]+'-'+months[datetime[2]]+'-'+datetime[1]);//date
 		match.push(datetime[4]);//time
+		// parse ua to bot, browser, browser_ver, os, os_ver
+		var ua=parse_ua(match[field_pos['ua']]);
+		match=match.concat([ua.bot,ua.browser,ua.browser_ver,ua.os,ua.os_ver]);
 		requests.push({
 			sql:'INSERT INTO log '+'('+fields+')'+
 			'VALUES'+'('+fields.replace(/[^ ,]+/g, '?')+ ')',
@@ -139,6 +145,88 @@ function read_text_into_table(text,cb){
 	log('Sending to database...');
 	html5sql.process(requests,
 			function(){cb()});
+}
+
+
+
+function parse_ua(ua) {
+	var browsers={
+		'MSIE':{ver: [/MSIE.([\d.]*)/]},
+		'OPR':{ver: [/OPR.([\d.]*)/]},//Note: OPR should go above Chrome
+		'Chrome':{ver: [/Chrome.([\d.]*)/]},
+		'Firefox':{ver: [/Firefox.([\d.]*)/]},
+		'Opera':{ver: [/Version.([\d.]*)/, /Opera.([\d.]*)/]},
+		'Runet-Research-Crawler':{bot:true, ver: []},
+		'YandexImages':{bot:true, ver: [/YandexImages.([\d.]*)/]},
+		'Nutch':{bot:true, ver: [/Nutch.([\d.]*)/]},
+		'YandexDirect':{bot:true, ver: [/YandexDirect.([\d.]*)/]},
+		'Safari':{ver: [/Safari.([\d.]*)/]},
+		'Trident':{ver: [/Trident.([\d.]*)/]},
+		/*
+		// these bots made less than 10 hits each during last week
+		'curl':{bot:true, ver: [/curl.([\d.]*)/]},
+		'vkShare':{bot:true, ver: []},
+		'Baiduspider':{bot:true, ver: [/Baiduspider.([\d.]*)/]},
+		'Ezooms':{bot:true, ver: [/Ezooms.([\d.]*)/]},
+		'archive.org_bot':{bot:true, ver: []},
+		'Google-Site-Verification':{bot:true, ver: [/Google-Site-Verification.([\d.]*)/]},
+		'Who.is Bot':{bot:true, ver: []},
+		'NetcraftSurveyAgent':{bot:true, ver: [/NetcraftSurveyAgent.([\d.]*)/]},
+		'BingPreview':{bot:true, ver: [/BingPreview.([\d.]*)/]},
+		'statdom.ru/Bot':{bot:true, ver: []},
+		'facebookexternalhit':{bot:true, ver: [/facebookexternalhit.([\d.]*)/]},
+		*/
+	};
+	var os={
+		'Windows':{ver: [/Windows NT.([\d.]*)/]},
+		'Android':{ver: [/Android.([\d.]*)/]},//Note: Android should go above Linux
+		'Linux':{ver: [/(Ubuntu)/]},
+		'iPhone OS':{ver: [/iPhone OS.([\d._]*)/]},//Note_ iPhone should go above Mac OS
+		'Mac OS':{ver: [/Mac OS X.([\d._]*)/]},
+	};
+	var result={
+		'bot':'maybe',
+		'browser':'unknown',
+		'browser_ver':'unknown',
+		'os':'unknown',
+		'os_ver':'unknown',
+	};
+	for(var i in browsers){
+		if(ua.indexOf(i)>-1){
+			result.browser=i;
+			result.bot=browsers[i].bot?'yes':'no';
+			for(var j in browsers[i].ver){
+				var match=ua.match(browsers[i].ver[j]);
+				if(match) {
+					result.browser_ver=match[1];
+					break;
+				}
+			}
+			break;
+		}
+	}
+	for(var i in os){
+		if(ua.indexOf(i)>-1){
+			result.os=i;
+			for(var j in os[i].ver){
+				var match=ua.match(os[i].ver[j]);
+				if(match) {
+					result.os_ver=match[1];
+					break;
+				}
+			}
+			break;
+		}
+	}
+	if(result.browser=='unknown'){
+		var match=ua.match(/([\w\d_.-]*bot[\w\d_.-]*)\/([\w\d.\/]*)/i);
+		if(match){
+			result.bot='bot';
+			result.browser=match[1];
+			result.browser_ver=match[2];
+		}
+	}
+	return result;
 }
 
 
