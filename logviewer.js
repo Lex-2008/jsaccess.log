@@ -12,6 +12,7 @@ fields+=', date, time, bot, browser, browser_ver, os, os_ver';
 
 afields=fields.split(/[, ]+/);
 hidden={'user':1, 'datetime':1, 'method':1, 'protocol':1, 'ua':1};
+use_hidden=true;
 bookmarks={
 	"SELECT * FROM log ORDER BY date DESC, time DESC LIMIT 10":"Last 10 visits",
 	"SELECT * FROM log WHERE url=\"/\" ORDER BY date DESC, time DESC LIMIT 10":"Last 10 visits for a specific URL",
@@ -232,6 +233,7 @@ function parse_ua(ua) {
 
 
 function process_SQL(sql){
+	use_hidden=sql.match(/^\s*SELECT\s*\*/i);
 	html5sql.process([sql],show_SQL_results);
 }
 
@@ -271,26 +273,31 @@ function cv_me(){
 	if(this.className) {
 		hidden[this.className]=!hidden[this.className];
 	}
-	var hidden_list='';
-	var headers=document.querySelectorAll('#result table th');
-	for(var i=0; i<headers.length; i++) {
-		headers[i].onclick=cv_me;
-		if(hidden[headers[i].className]) {
-			hidden_list+='<li class="'+headers[i].className+'">'+headers[i].className+'</li>';
+	if(use_hidden) {
+		var hidden_list='';
+		var hidden_style=[];
+		var headers=document.querySelectorAll('#result table th');
+		for(var i=0; i<headers.length; i++) {
+			headers[i].onclick=cv_me;
+			if(hidden[headers[i].className]) {
+				hidden_list+='<li class="'+headers[i].className+'">'+headers[i].className+'</li>';
+			}
 		}
-	}
-	gebi('hidden_list').innerHTML=hidden_list;
-	var items=document.querySelectorAll('#hidden_list li');
-	for(var i=0; i<items.length; i++) {
-		items[i].onclick=cv_me;
-	}
-	var hidden_style=[];
-	for(var className in hidden) {
-		if(hidden[className]) {
-			hidden_style.push('#result table .'+className);
+		gebi('hidden_list').innerHTML=hidden_list;
+		var items=document.querySelectorAll('#hidden_list li');
+		for(var i=0; i<items.length; i++) {
+			items[i].onclick=cv_me;
 		}
+		for(var className in hidden) {
+			if(hidden[className]) {
+				hidden_style.push('#result table .'+className);
+			}
+		}
+		gebi('hidden_style').innerHTML=hidden_style.join(',')+'{display:none}';
+	} else {
+		gebi('hidden_list').innerHTML='';
+		gebi('hidden_style').innerHTML='';
 	}
-	gebi('hidden_style').innerHTML=hidden_style.join(',')+'{display:none}';
 }
 
 function init_hidden(){

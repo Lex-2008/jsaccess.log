@@ -9,8 +9,8 @@ Features
 - parses Apache access.log using regexp
 - saves it to WebSQL database
 - provides an input for SQL query
-- bookmark some interesting queries (few are provided at start)
-- can hide some columns (useful for SELECT * queries)
+- provides ability to bookmark queries (few interesting ones are provided initially)
+- hides less useful columns for SELECT * queries
 
 Requirements
 ------------
@@ -34,10 +34,10 @@ Usage
 Plans
 -----
 
-* parse ua into browser, os, etc
 * parse referrer to search string for some search engines
 * hide too long strings (imagine ua) behind overflow:hidden and show them on click
 * use Range requests to check for updates in files
 * tell SQLite which columns are numeric ones
 * draw histograms on numeric columns
+* show geoIP information and, maybe, reverse DNS names for IP addresses
 
