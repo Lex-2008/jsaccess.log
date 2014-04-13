@@ -6,12 +6,12 @@ filename='access.log';
 
 // 127.0.0.1 localhost - [06/Apr/2014:13:53:23 +0200] "GET /index.html HTTP/1.1" 200 2780 "http://localhost/" "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:28.0) Gecko/20100101 Firefox/28.0"
 re=/^([^ ]*) ([^ ]*) ([^ ]*) \[([^\]]*)\] "(GET|POST|HEAD|CONNECT) (.*) (HTTP\/1\..)" ([0-9]*) ([0-9]*) "([^ ]*)" "(.*)"$/;
-fields='ip, hostname, user, datetime, method, url, protocol, response, size, referrer, ua';
+fields='ip, hostname, user, datetime, method, url, protocol, response, size, ref, ua';
 // above fields are matched from regexp; below fields are added by script
-fields+=', date, time, bot, browser, browser_ver, os, os_ver';
+fields+=', date, time, bot, browser, browser_ver, os, os_ver, ref_host, search';
 
 afields=fields.split(/[, ]+/);
-hidden={'user':1, 'datetime':1, 'method':1, 'protocol':1, 'ua':1};
+hidden={'user':1, 'datetime':1, 'method':1, 'protocol':1, 'ref':1, 'ua':1};
 use_hidden=true;
 bookmarks={
 	"SELECT * FROM log ORDER BY date DESC, time DESC LIMIT 10":"Last 10 visits",
@@ -22,6 +22,8 @@ bookmarks={
 	"SELECT url, size/1000/1000. AS \"size(MB)\", count(*) FROM log GROUP BY url ORDER BY CAST(size AS NUMERIC) DESC LIMIT 50":"Top 50 heaviest resources",
 	"SELECT browser, bot, count(*) FROM log GROUP BY browser ORDER BY count(*) DESC LIMIT 20":"Top 20 browsers (incl bots)",
 	"SELECT os, os_ver, count(*) FROM log WHERE bot=\"no\" GROUP BY os, os_ver ORDER BY count(*) DESC":"Popular OSes",
+	"SELECT ref_host, count(*) FROM log WHERE ref_host<>\"\" GROUP BY ref_host ORDER BY count(*) DESC LIMIT 10":"Top 10 traffic sources",
+	"SELECT ref_host as search_engine, search, count(*) FROM log WHERE search<>\"\" GROUP BY ref_host, search ORDER BY count(*) DESC LIMIT 10":"Top 10 search requests",
 	"SELECT ua, count(*) FROM log WHERE browser=\"unknown\" GROUP BY ua ORDER BY count(*) DESC LIMIT 50":"Top unknown browsers",
 };
 
@@ -138,6 +140,9 @@ function read_text_into_table(text,cb){
 		// parse ua to bot, browser, browser_ver, os, os_ver
 		var ua=parse_ua(match[field_pos['ua']]);
 		match=match.concat([ua.bot,ua.browser,ua.browser_ver,ua.os,ua.os_ver]);
+		// parse ref to ref_host, search
+		var ref=parse_ref(match[field_pos['ref']])
+		match=match.concat([ref.host,ref.search]);
 		requests.push({
 			sql:'INSERT INTO log '+'('+fields+')'+
 			'VALUES'+'('+fields.replace(/[^ ,]+/g, '?')+ ')',
@@ -230,7 +235,101 @@ function parse_ua(ua) {
 	return result;
 }
 
+function parse_ref(ref){
+	var result={
+		'host':'',
+		'search':'',
+	}
+	if(ref=='-'){
+		return result;
+	}
+	// host
+	var global=['google','yandex'];
+	var match=ref.match(/https?:\/\/([^\/]*)/);
+	if(match) {
+		result.host=match[1];
+		for(var i in global) {
+			if(result.host.indexOf(global[i])>-1) {
+				result.host=global[i];
+				break;
+			}
+		}
+	}
+	// search
+	var searches={
+		'yandex.ru/search':{
+			match:/text=([^&]*)/,
+			decode:function(text){
+				var cp1251="ЂЃ‚ѓ„…†‡€‰Љ‹ЊЌЋЏђ‘’“”•–—�™љ›њќћџ ЎўЈ¤Ґ¦§Ё©Є«¬­®Ї°±Ііґµ¶·ё№є»јЅѕїАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмнопрстуфхцчшщъыьэюя";
+				var cp866="АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмноп░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀рстуфхцчшщъыьэюяЁёЄєЇїЎў°∙·√№¤■"+String.fromCharCode(160);
+				try{
+					return change_charset(decodeURIComponent(text), cp866, cp1251).replace(/\+/g,' ');
+				} catch(e){
+					return unescape_with_charset(text, cp1251);
+				}
+			}
+		},
+		'go.mail.ru':{match:/q=([^&]*)/},
+		'nigma.ru':{match:/s=([^&]*)/},
+		'bing.com':{match:/q=([^&]*)/},
+		'yandex.ru/clck':{match:/text=([^&]*)/},
+		'yandex.ru/touchsearch':{match:/text=([^&]*)/},
+		'yandex.ru/yandsearch':{same_as:'yandex.ru/search'},
+		'yandex.ua/search':{same_as:'yandex.ru/search'},
+		'yandex.ua/clck':{same_as:'yandex.ru/clck'},
+		'yandex.ua/touchsearch':{same_as:'yandex.ru/touchsearch'},
+	}
+	for(var i in searches){
+		if(ref.indexOf(i)>-1){
+			if(searches[i].same_as) {
+				i=searches[i].same_as;
+			};
+			var match=ref.match(searches[i].match);
+			if(match) {
+				if(searches[i].decode) {
+					result.search=searches[i].decode(match[1]);
+				} else {
+					result.search=decodeURIComponent(match[1]).replace(/\+/g,' ');
+				}
+			}
+			break;
+		}
+	}
+	return result;
+}
 
+function change_charset(text, from, to){
+	var ret='';
+	for(i=0;i<text.length;i++){
+		var pos=from.indexOf(text[i]);
+		if(pos>-1){
+			ret+=to[pos];
+		} else {
+			ret+=text[i];
+		}
+	}
+	return ret;
+}
+
+function unescape_with_charset(text, chars){
+	var ret='';
+	for(i=0;i<text.length;i++){
+		if(text[i]=='%'){
+			var charCode=parseInt(text[i+1]+text[i+2],16);
+			if(charCode<128) {
+				ret+=String.fromCharCode(charCode);
+			} else {
+				ret+=chars[charCode-128];
+			};
+			i+=2;
+		}else if(text[i]=='+'){
+			ret+=' ';
+		}else{
+			ret+=text[i];
+		}
+	}
+	return ret;
+}
 
 function process_SQL(sql){
 	use_hidden=sql.match(/^\s*SELECT\s*\*/i);

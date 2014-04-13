@@ -11,6 +11,8 @@ Features
 - provides an input for SQL query
 - provides ability to bookmark queries (few interesting ones are provided initially)
 - hides less useful columns for SELECT * queries
+- parses user-agent and referrer to browser, os, and search request
+(if user came from one of supported search engines)
 
 Requirements
 ------------
@@ -34,7 +36,6 @@ Usage
 Plans
 -----
 
-* parse referrer to search string for some search engines
 * hide too long strings (imagine ua) behind overflow:hidden and show them on click
 * use Range requests to check for updates in files
 * tell SQLite which columns are numeric ones
