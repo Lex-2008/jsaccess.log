@@ -2,7 +2,9 @@ databaseName='access_log_db';
 displayName='Access logs';
 estimatedSize=1*1000*1000;
 
-filename='access.log';
+filename_current='current.log';
+filename_archive='previous.log';
+update_time=7*24*60*60*1000;//milliseconds
 
 // 127.0.0.1 localhost - [06/Apr/2014:13:53:23 +0200] "GET /index.html HTTP/1.1" 200 2780 "http://localhost/" "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:28.0) Gecko/20100101 Firefox/28.0"
 re=/^([^ ]*) ([^ ]*) ([^ ]*) \[([^\]]*)\] "(GET|POST|HEAD|CONNECT) (.*) (HTTP\/1\..)" ([0-9]*) ([0-9]*) "([^ ]*)" "(.*)"$/;
@@ -26,10 +28,11 @@ bookmarks={
 	"SELECT ref_host as search_engine, search, count(*) FROM log WHERE search<>\"\" GROUP BY ref_host, search ORDER BY count(*) DESC LIMIT 10":"Top 10 search requests",
 	"SELECT ua, count(*) FROM log WHERE browser=\"unknown\" GROUP BY ua ORDER BY count(*) DESC LIMIT 50":"Top unknown browsers",
 };
+last_load={line:'', offset:0, time:0};
 
 function gebi(id){return document.getElementById(id)};
 function escapeHTML(text){return (''+text).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#039;').replace(/</g,'&lt;').replace(/>/g,'&gt;')};
-function log(text){gebi('result').innerHTML='<pre>'+escapeHTML(text)+'</pre>'}
+function log(text){console.log(text);gebi('result').innerHTML='<pre>'+escapeHTML(text)+'</pre>'}
 function error_handler(error, statement){log("Error [" + error.message + "] when processing [" + statement+']');}
 
 
@@ -44,6 +47,7 @@ function init(elem){
 	str+='#result table, #result td, #result th { border:1px solid black; }';
 	str+='#result pre {white-space: pre-wrap}';
 	str+='</style>';
+	str+='<input type="button" id="init_data" value="Load new data">';
 	str+='<select id="bookmarks"></select><input type="button" id="bookmark" value="<<<">';
 	str+='<input id="query"><input type="submit" id="submit">';
 	str+='<ul id="hidden_list"></ul>';
@@ -53,6 +57,7 @@ function init(elem){
 	init_db(function(){log('ready!')});
 	init_bookmarks();
 	init_hidden();
+	gebi('init_data').onclick=function(){init_data(function(){log('done!')})};
 	gebi('submit').onclick=function(){process_SQL(gebi('query').value)};
 	gebi('bookmark').onclick=function(){bookmark(gebi('query').value)};
 	gebi('bookmarks').onchange=function(){if(this.value){gebi('query').value=this.value;this.value=''}};
@@ -70,7 +75,7 @@ function init_db(cb){
 				} else if(result.rows.item(0).sql!=create_table_sql) {
 					init_table(cb,['DROP TABLE log', create_table_sql]);
 				} else {
-					read_file_into_table_if_needed(cb);
+					init_data(cb);
 				}
 			});
 };
@@ -81,41 +86,104 @@ function init_table(cb,requests){
 		requests.push('CREATE INDEX IF NOT EXISTS '+afields[i]+
 				' ON log'+'('+afields[i]+')');
 	}
-	html5sql.process(requests,
-			function(){read_file_into_table(cb)});
+	html5sql.process(requests, function(tx, result) {init_data(cb)});
 };
 
-function read_file_into_table_if_needed(cb){
-	html5sql.process(['ANALYZE log', 'SELECT stat FROM sqlite_stat1 WHERE tbl="log" LIMIT 1'],
-			function(tx, result) {
-				if(result.rows.length==0 || result.rows.item(0).stat.charAt(0)=='0') {
-					read_file_into_table(cb);
-				}
-				else {
-					cb();
-				}
-			});
-};
-
-function read_file_into_table(cb){
-	xmlhttp = new XMLHttpRequest();
-	xmlhttp.open('GET',filename, true);
-	xmlhttp.onreadystatechange = function() {
-		if (xmlhttp.readyState == 4) {
-			if(xmlhttp.status == 200) {
-				read_text_into_table(xmlhttp.responseText,cb);
+//c http://msdn.microsoft.com/en-us/library/ie/ms535157%28v=vs.85%29.aspx
+function read_file(filename,range,cb){
+	var xhr = new XMLHttpRequest(); // Set up xhr request
+	xhr.open("GET", filename, true);   // Open the request
+	log('Loading '+filename+'...');
+	// If there's a range set, create a request header to limit to that range
+	if (range !== undefined && range !== null && range != 0) {
+		range=String(range);
+		if(range.length > 0) {
+			if(range.indexOf('-')<0) {
+				range+='-';
 			}
+			log('Loading '+filename+' with range '+range+'...');
+			xhr.setRequestHeader("Range", "bytes=" + range);
 		}
-	};
-	log('Loading '+filename);
-	xmlhttp.send(null);
+	}
+	xhr.onreadystatechange = function () {
+		if (xhr.readyState == xhr.DONE) {
+			var totalLength=xhr.getResponseHeader('Content-Length');
+			if(xhr.getResponseHeader('Content-Range'))
+				totalLength=xhr.getResponseHeader('Content-Range').match(/\d*$/)[0];
+			cb(xhr.responseText,totalLength);
+		}
+	}
+	xhr.addEventListener("error", function (e) {
+		log("Error: " + e + " Could not load url.");
+	}, false);
+	xhr.send();
 }
 
-function read_text_into_table(text,cb){
+function init_data(cb){
+	try{
+		last_load=JSON.parse(localStorage.last_load);
+	} catch(e) {};
+	var delta=Date.now()-last_load.time;
+	if(delta<update_time) {
+		update1(cb);
+	} else if(delta<2*update_time) {
+		update2(cb);
+	} else {
+		update3(cb);
+	}
+}
+
+function update1(cb){
+	// try to read tail of current file
+	read_file(filename_current,last_load.offset, function(text,totalLength){
+		// console.log('update1: ['+text.substr(0,last_load.line.length)+']==['+last_load.line+']:'+(text.substr(0,last_load.line.length)==last_load.line));
+		if(text.substr(0,last_load.line.length)==last_load.line) {
+			// use tail of current file
+			read_text_into_table(text.substr(last_load.line.length),totalLength,cb);
+		} else {
+			update2(cb);
+		}
+	});
+}
+
+function update2(cb){
+	// try to read tail of archive file
+	read_file(filename_archive,last_load.offset, function(text,totalLength){
+		// console.log('update2: ['+text.substr(0,last_load.line.length)+']==['+last_load.line+']:'+(text.substr(0,last_load.line.length)==last_load.line));
+		if(text.substr(0,last_load.line.length)==last_load.line) {
+			// use tail of archive file
+			read_text_into_table(text.substr(last_load.line.length), totalLength,
+				function(){
+					// read full current file
+					read_file(filename_current, 0, function(text,totalLength){
+						read_text_into_table(text,totalLength,cb);
+					});
+				});
+		} else {
+			update3(cb);
+		}
+	});
+}
+
+// read both files completely
+function update3(cb){
+	// console.log('update3');
+	// read full archive file
+	read_file(filename_archive, 0, function(text,totalLength){
+		read_text_into_table(text, totalLength, function(){
+			// read full current file
+			read_file(filename_current, 0, function(text,totalLength){
+				read_text_into_table(text,totalLength,cb);
+			});
+		});
+	});
+}
+
+function read_text_into_table(text,totalLength,cb){
 	var trim = function (string) {
 		return string.replace(/^\s+/, "").replace(/\s+$/, "");
 	};
-	var field_pos={};//{ip:0, hostname: 1,...}
+	var field_pos={};// ip:0, hostname:1, ...
 	for(var i in afields) {
 		field_pos[afields[i]]=i;
 	}
@@ -129,7 +197,6 @@ function read_text_into_table(text,cb){
 		};
 		var match=lines[line].match(re);
 		if(!match) {
-			console.error("Can't match string: ["+lines[line]+']');
 			continue;
 		};
 		match.shift();
@@ -141,16 +208,42 @@ function read_text_into_table(text,cb){
 		var ua=parse_ua(match[field_pos['ua']]);
 		match=match.concat([ua.bot,ua.browser,ua.browser_ver,ua.os,ua.os_ver]);
 		// parse ref to ref_host, search
-		var ref=parse_ref(match[field_pos['ref']])
+		var ref=parse_ref(match[field_pos['ref']]);
 		match=match.concat([ref.host,ref.search]);
 		requests.push({
 			sql:'INSERT INTO log '+'('+fields+')'+
 			'VALUES'+'('+fields.replace(/[^ ,]+/g, '?')+ ')',
 			data:match});
 	};
-	log('Sending to database...');
-	html5sql.process(requests,
-			function(){cb()});
+	if(lines.length>1) {
+		// save two last lines (last line is usually empty) with CR/LF
+		// note that on Windows this will save CRLF between two lines,
+		// while on Linux -- CR before each of them
+		var save_bytes=lines[lines.length-1].length+lines[lines.length-2].length+2;
+		// save minimum 100 bytes
+		save_bytes=Math.max(100,save_bytes);
+		var save_text=text.substr(-save_bytes);
+		// console.log('saving ['+save_text+'] with offset '+(totalLength-save_text.length));
+		last_load={
+			line:save_text,
+			offset:totalLength-save_text.length,
+		};
+	} else if(text.length>0) {
+		// only one line -- save it completely
+		// console.log('bad saving ['+text+'] with offset '+(totalLength-text.length));
+		last_load={
+			line:text,
+			offset:totalLength-text.length,
+		};
+	}
+	last_load.time=Date.now();
+	localStorage.last_load=JSON.stringify(last_load);
+	if(requests.length>0) {
+		log('Sending '+requests.length+' rows to database...');
+		html5sql.process(requests, function(){if(cb)cb()});
+	} else {
+		if(cb)cb()
+	}
 }
 
 

@@ -13,6 +13,7 @@ Features
 - hides less useful columns for SELECT * queries
 - parses user-agent and referrer to browser, os, and search request
 (if user came from one of supported search engines)
+- uses Range requests to check for updates in files
 
 Requirements
 ------------
@@ -24,7 +25,10 @@ Installation
 ------------
 
 * symlink or copy log file you want to be analyzed to a place available from your web browser
-* Point 'filename' variable to that file
+* Point `filename_current` variable to that file
+* Point `filename_archive` variable to its backup
+* Set `update_time` variable to time (in milliseconds) how often do you move
+`filename_current` to `filename_archive`
 
 Usage
 -----
@@ -36,8 +40,8 @@ Usage
 Plans
 -----
 
+* check for required features in the browser and show message if they're not supported
 * hide too long strings (imagine ua) behind overflow:hidden and show them on click
-* use Range requests to check for updates in files
 * tell SQLite which columns are numeric ones
 * draw histograms on numeric columns
 * show geoIP information and, maybe, reverse DNS names for IP addresses
