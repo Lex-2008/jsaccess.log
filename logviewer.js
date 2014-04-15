@@ -120,9 +120,13 @@ function read_file(filename,range,cb){
 }
 
 function init_data(cb){
-	try{
-		last_load=JSON.parse(localStorage.last_load);
-	} catch(e) {};
+	if(localStorage[databaseName+'_last_load']) {
+		try{
+			last_load=JSON.parse(localStorage[databaseName+'_last_load']);
+		} catch(e) {
+			delete localStorage[databaseName+'_last_load'];
+		};
+	}
 	var delta=Date.now()-last_load.time;
 	if(delta<update_time) {
 		update1(cb);
@@ -237,7 +241,7 @@ function read_text_into_table(text,totalLength,cb){
 		};
 	}
 	last_load.time=Date.now();
-	localStorage.last_load=JSON.stringify(last_load);
+	localStorage[databaseName+'_last_load']=JSON.stringify(last_load);
 	if(requests.length>0) {
 		log('Sending '+requests.length+' rows to database...');
 		html5sql.process(requests, function(){if(cb)cb()});
@@ -493,11 +497,11 @@ function cv_me(){
 }
 
 function init_hidden(){
-	if(localStorage.hidden) {
+	if(localStorage[databaseName+'_hidden']) {
 		try{
-			hidden=JSON.parse(localStorage.hidden);
+			hidden=JSON.parse(localStorage[databaseName+'_hidden']);
 		} catch (e) {
-			delete localStorage.hidden;
+			delete localStorage[databaseName+'_hidden'];
 		}
 	}
 }
@@ -514,7 +518,7 @@ function bookmark(text){
 	} else {
 		bookmarks[text]=title;
 	}
-	localStorage.bookmarks=JSON.stringify(bookmarks);
+	localStorage[databaseName+'_bookmarks']=JSON.stringify(bookmarks);
 	rebuild_bookmarks();
 };
 
@@ -527,11 +531,11 @@ function rebuild_bookmarks(){
 }
 
 function init_bookmarks(){
-	if(localStorage.bookmarks) {
+	if(localStorage[databaseName+'_bookmarks']) {
 		try{
-			bookmarks=JSON.parse(localStorage.bookmarks);
+			bookmarks=JSON.parse(localStorage[databaseName+'_bookmarks']);
 		} catch (e) {
-			delete localStorage.bookmarks;
+			delete localStorage[databaseName+'_bookmarks'];
 		}
 	}
 	rebuild_bookmarks();
