@@ -32,6 +32,7 @@ last_load={line:'', offset:0, time:0};
 
 function gebi(id){return document.getElementById(id)};
 function escapeHTML(text){return (''+text).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#039;').replace(/</g,'&lt;').replace(/>/g,'&gt;')};
+function escapeCSSName(text){return (''+text).replace(/([^\w\d_-])/g,'\\$1')};
 function log(text){console.log(text);gebi('result').innerHTML='<pre>'+escapeHTML(text)+'</pre>'}
 function error_handler(error, statement){log("Error [" + error.message + "] when processing [" + statement+']');}
 
@@ -52,6 +53,7 @@ function init(elem){
 	str+='<input id="query"><input type="submit" id="submit">';
 	str+='<ul id="hidden_list"></ul>';
 	str+='<style id="hidden_style"></style>';
+	str+='<style id="number_columns_style"></style>';
 	str+='<div id="result"></div>';
 	elem.innerHTML=str;
 	init_db(function(){log('ready!')});
@@ -441,8 +443,10 @@ function show_SQL_results(tx, response){
 	var result='<table><thead><tr>';
 	// column headers
 	var columns=[];
+	var number_columns={};
 	for(var name in response.rows.item(0)) {
 		columns.push(name);
+		number_columns[name]=true;
 		result+='<th class="'+escapeHTML(name)+'">'+escapeHTML(name)+'</th>';
 	}
 	result+='</tr></thead><tbody>';
@@ -451,6 +455,9 @@ function show_SQL_results(tx, response){
 		var row=response.rows.item(i);
 		result+='<tr>';
 		for(var j=0; j<columns.length; j++){
+			if(typeof row[columns[j]]!='number') {
+				number_columns[columns[j]]=false;
+			}
 			if(columns[j] in row){
 				result+='<td class="'+escapeHTML(columns[j])+'">'+escapeHTML(row[columns[j]])+'</td>';
 			} else {
@@ -463,6 +470,8 @@ function show_SQL_results(tx, response){
 	gebi('result').innerHTML=result;
 	// refresh list of hidden columns
 	cv_me();
+	// draw histograms
+	number_columns_histograms(number_columns);
 }
 
 function cv_me(){
@@ -476,7 +485,7 @@ function cv_me(){
 		for(var i=0; i<headers.length; i++) {
 			headers[i].onclick=cv_me;
 			if(hidden[headers[i].className]) {
-				hidden_list+='<li class="'+headers[i].className+'">'+headers[i].className+'</li>';
+				hidden_list+='<li class="'+escapeHTML(headers[i].className)+'">'+escapeHTML(headers[i].className)+'</li>';
 			}
 		}
 		gebi('hidden_list').innerHTML=hidden_list;
@@ -486,7 +495,7 @@ function cv_me(){
 		}
 		for(var className in hidden) {
 			if(hidden[className]) {
-				hidden_style.push('#result table .'+className);
+				hidden_style.push('#result table .'+escapeCSSName(className));
 			}
 		}
 		gebi('hidden_style').innerHTML=hidden_style.join(',')+'{display:none}';
@@ -494,6 +503,33 @@ function cv_me(){
 		gebi('hidden_list').innerHTML='';
 		gebi('hidden_style').innerHTML='';
 	}
+}
+
+function number_columns_histograms(number_columns) {
+	var number_columns_style=[];
+	for(var className in number_columns) {
+		if(!number_columns[className]) {
+			continue;
+		}
+		number_columns_style.push('#result td.'+escapeCSSName(className));
+		var values_sum=0;
+		var values_max=0;
+		var cells=document.querySelectorAll('#result td.'+escapeCSSName(className));
+		for(var i=0; i<cells.length; i++) {
+			var value=parseFloat(cells[i].innerHTML);
+			values_sum+=value;
+			values_max=Math.max(values_max,value);
+		}
+		if(values_max<values_sum*0.3) {
+			values_sum=values_max;
+		}
+		for(var i=0; i<cells.length; i++) {
+			var value=parseFloat(cells[i].innerHTML);
+			cells[i].style.backgroundSize=Math.round((value/values_sum)*100)+'% 100%';
+		}
+	}
+	gebi('number_columns_style').innerHTML=number_columns_style.join(', ')+
+		'{background-image: linear-gradient(to right, lightgray, lightgray); background-repeat: no-repeat;}';
 }
 
 function init_hidden(){

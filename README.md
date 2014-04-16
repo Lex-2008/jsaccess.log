@@ -1,7 +1,7 @@
 jsaccess.log
 ============
 
-Apache access.log parser in javascript
+Apache access.log parser in javascript. Lets you analyze access logs in nice SQL way
 
 Features
 --------
@@ -11,6 +11,7 @@ Features
 - provides an input for SQL query
 - provides ability to bookmark queries (few interesting ones are provided initially)
 - hides less useful columns for SELECT * queries
+- draws histograms on columns reported by SQLite as numeric
 - parses user-agent and referrer to browser, os, and search request
 (if user came from one of supported search engines)
 - uses Range requests to check for updates in files
@@ -43,6 +44,5 @@ Plans
 * check for required features in the browser and show message if they're not supported
 * hide too long strings (imagine ua) behind overflow:hidden and show them on click
 * tell SQLite which columns are numeric ones
-* draw histograms on numeric columns
 * show geoIP information and, maybe, reverse DNS names for IP addresses
 
