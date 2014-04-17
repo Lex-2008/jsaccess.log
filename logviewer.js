@@ -42,6 +42,7 @@ function init(elem){
 	str+='<style>';
 	str+='#query, #bookmarks {width: 90% }';
 	str+='#submit, #bookmark {width: 9% }';
+	str+='#hidden_list {padding: 0px; margin: 0.5em 0em; line-height: 2em;}';
 	str+='#hidden_list li {display: inline; border: 1px solid black; padding: 1px 1em; margin: 1px 1em; cursor: pointer; font-weight: bold}';
 	str+='#result table { border-collapse:collapse; table-layout: fixed; word-wrap: break-word; width: 100%}';
 	str+='#result table th {cursor: pointer; }';
@@ -486,7 +487,7 @@ function cv_me(){
 		for(var i=0; i<headers.length; i++) {
 			headers[i].onclick=cv_me;
 			if(hidden[headers[i].className]) {
-				hidden_list+='<li class="'+escapeHTML(headers[i].className)+'">'+escapeHTML(headers[i].className)+'</li>';
+				hidden_list+='<li class="'+escapeHTML(headers[i].className)+'">'+escapeHTML(headers[i].className)+'</li> ';
 			}
 		}
 		gebi('hidden_list').innerHTML=hidden_list;
