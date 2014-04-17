@@ -15,6 +15,7 @@ Features
 - parses user-agent and referrer to browser, os, and search request
 (if user came from one of supported search engines)
 - uses Range requests to check for updates in files
+- shows geoIP information for IP addresses
 
 Requirements
 ------------
@@ -24,6 +25,8 @@ Requirements
 
 Installation
 ------------
+
+> TODO: this section is incomplete
 
 * symlink or copy log file you want to be analyzed to a place available from your web browser
 * Point `filename_current` variable to that file
@@ -44,5 +47,7 @@ Plans
 * check for required features in the browser and show message if they're not supported
 * hide too long strings (imagine ua) behind overflow:hidden and show them on click
 * tell SQLite which columns are numeric ones
-* show geoIP information and, maybe, reverse DNS names for IP addresses
-
+* show reverse IP hostname: api.hackertarget.com/reversedns/?q=109.120.165.193
+* support more geoIP providers:
+ipgeobase.ru:7020/geo?ip=109.120.165.193
+api.ipinfodb.com/v3/ip-city/?key=<your_api_key>&ip=109.120.165.193

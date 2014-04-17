@@ -56,10 +56,10 @@ function init(elem){
 	str+='<style id="number_columns_style"></style>';
 	str+='<div id="result"></div>';
 	elem.innerHTML=str;
-	init_db(function(){log('ready!')});
+	init_db(function(){log('ready!');if(geoip_init)geoip_init()});
 	init_bookmarks();
 	init_hidden();
-	gebi('init_data').onclick=function(){init_data(function(){log('done!')})};
+	gebi('init_data').onclick=function(){init_data(function(){log('done!');if(geoip_check_missing)geoip_check_missing()})};
 	gebi('submit').onclick=function(){process_SQL(gebi('query').value)};
 	gebi('bookmark').onclick=function(){bookmark(gebi('query').value)};
 	gebi('bookmarks').onchange=function(){if(this.value){gebi('query').value=this.value;this.value=''}};
@@ -69,6 +69,7 @@ function init(elem){
 function init_db(cb){
 	html5sql.openDatabase(databaseName, displayName, estimatedSize);
 	html5sql.defaultFailureCallback=error_handler;
+	html5sql.putSelectResultsInArray=false;
 	var create_table_sql = 'CREATE TABLE log '+'('+fields+')';
 	html5sql.process('SELECT sql FROM sqlite_master WHERE type="table" AND name="log"',
 			function(tx, result) {
