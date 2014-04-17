@@ -44,6 +44,7 @@
 				' ON geoip'+'('+afields[i]+')');
 		}
 		requests.push('CREATE UNIQUE INDEX IF NOT EXISTS geoip_ip_unique ON geoip (ip)');
+		requests.push('CREATE VIEW IF NOT EXISTS big AS SELECT * FROM log NATURAL LEFT JOIN geoip');
 		html5sql.process(requests, function(tx, result) {read_file_into_table(cb)});
 	};
 
