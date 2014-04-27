@@ -1,2 +1,2 @@
 #!/bin/bash
-cut -d ' ' -f 1 previous.log | sort -u | sed 's/.*/--url freegeoip.net\/csv\/&/' | curl -K - >geoip.txt
+cut -d ' ' -f 1 $(dirname $0)/previous.log | sort -u | wget -i - -B http://freegeoip.net/csv/ -O $(dirname $0)/geoip.txt
