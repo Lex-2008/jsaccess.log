@@ -357,12 +357,12 @@ function parse_ref(ref){
 		}
 	}
 	// search
+	var cp1251="ЂЃ‚ѓ„…†‡€‰Љ‹ЊЌЋЏђ‘’“”•–—�™љ›њќћџ ЎўЈ¤Ґ¦§Ё©Є«¬­®Ї°±Ііґµ¶·ё№є»јЅѕїАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмнопрстуфхцчшщъыьэюя";
+	var cp866="АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмноп░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀рстуфхцчшщъыьэюяЁёЄєЇїЎў°∙·√№¤■"+String.fromCharCode(160);
 	var searches={
 		'yandex.ru/search':{
 			match:/text=([^&]*)/,
 			decode:function(text){
-				var cp1251="ЂЃ‚ѓ„…†‡€‰Љ‹ЊЌЋЏђ‘’“”•–—�™љ›њќћџ ЎўЈ¤Ґ¦§Ё©Є«¬­®Ї°±Ііґµ¶·ё№є»јЅѕїАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмнопрстуфхцчшщъыьэюя";
-				var cp866="АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмноп░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀рстуфхцчшщъыьэюяЁёЄєЇїЎў°∙·√№¤■"+String.fromCharCode(160);
 				try{
 					return change_charset(decodeURIComponent(text), cp866, cp1251).replace(/\+/g,' ');
 				} catch(e){
@@ -390,7 +390,11 @@ function parse_ref(ref){
 				if(searches[i].decode) {
 					result.search=searches[i].decode(match[1]);
 				} else {
-					result.search=decodeURIComponent(match[1]).replace(/\+/g,' ');
+					try {
+						result.search=decodeURIComponent(match[1]).replace(/\+/g,' ');
+					} catch(e){
+						result.search=unescape_with_charset(match[1], cp1251);
+					}
 				}
 			}
 			break;
