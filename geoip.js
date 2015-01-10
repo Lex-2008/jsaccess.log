@@ -89,7 +89,7 @@
 			return string.replace(/^\s+/, "").replace(/\s+$/, "");
 		};
 		var quotetrim = function (string) {
-			return string.replace(/^[\s"]+/, "").replace(/[\s"]+$/, "");
+			return string.replace(/^[\s"]+/, "").replace(/[\s",]+$/, "");
 		};
 		var field_pos={};// ip:0, country:1, ...
 		for(var i in afields) {
@@ -102,7 +102,7 @@
 			if(lines[line]=='') {
 				continue;
 			};
-			var match=lines[line].split('","').map(quotetrim);
+			var match=lines[line].match(/"(.*?)",|(.*?),|(.+?)$/g).map(quotetrim);
 			//var match=lines[line].split(';');
 			if(!match || match.length!=afields.length) {
 				//if(!match || match.length<11 ||  match.shift()!='OK')
