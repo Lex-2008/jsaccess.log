@@ -1,8 +1,6 @@
 (function(){
 	window.geoip_cache_filename='geoip.txt';
-	//window.geoip_key='';
-	var fields='ip, co, country, reg, region, city, zip_code, lat, long, metro_code, area_code';
-	//var fields='ip, co, country, region, city, zipCode, lat, long, timezone';
+	var fields='longitude, latitude, asn, offset, ip, area_code, continent_code, dma_code, city, timezone, region, country_code, isp, postal_code, country, country_code3, region_code';
 	var afields=fields.split(/[, ]+/);
 	var missing_ips=[];
 	var missing_ips_total=0;
@@ -91,10 +89,6 @@
 		var quotetrim = function (string) {
 			return string.replace(/^[\s"]+/, "").replace(/[\s",]+$/, "");
 		};
-		var field_pos={};// ip:0, country:1, ...
-		for(var i in afields) {
-			field_pos[afields[i]]=i;
-		}
 		var lines=text.split('\n').map(trim);
 		var requests=[];
 		log('Parsing '+lines.length+' geoip entries...');
@@ -102,18 +96,21 @@
 			if(lines[line]=='') {
 				continue;
 			};
-			var match=lines[line].match(/"(.*?)",|(.*?),|(.+?)$/g).map(quotetrim);
-			//var match=lines[line].split(';');
-			if(!match || match.length!=afields.length) {
-				//if(!match || match.length<11 ||  match.shift()!='OK')
-				log('error! '+lines[line]+' has '+match.length+'tokens, expected '+afields.length,true);
+			var json;
+			try {
+				json=JSON.parse(lines[line]);
+			} catch(e) {
 				continue;
+				log('Could not parse JSON: ['+lines[line]+']');
 			}
-			//match.shift();
+			var data=[];
+			for(var i in afields) {
+				data[i]=json[afields[i]];
+			}
 			requests.push({
 				sql:'INSERT OR REPLACE INTO geoip '+
 				'VALUES'+'('+fields.replace(/[^ ,]+/g, '?')+ ')',
-				data:match});
+				data:data});
 		};
 		if(requests.length>0) {
 			log('Sending '+requests.length+' rows to geoip table...');
@@ -167,8 +164,7 @@
 
 	window.geoip_lookupIP=function(ip,cb){
 		read_file_into_table(cb,
-				'//freegeoip.net/csv/'+ip);
-				//'//api.ipinfodb.com/v3/ip-city/?key='+window.geoip_key+'&format=raw&ip='+ip);
+				'//www.telize.com/geoip/'+ip);
 	};
 
 
